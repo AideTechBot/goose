@@ -1,7 +1,7 @@
 from textblob import TextBlob
-from generate_response import format_response, check_pos_tags
 from stringscore import liquidmetal
-import behaviours
+from utils import format_response, check_pos_tags
+from constants import *
 import random
 import operator
 import sys
@@ -23,12 +23,19 @@ class Unbuffered(object):
 
 sys.stdout = Unbuffered(sys.stdout)
 
-keywords = behaviours.KeyWords()
-responses = behaviours.Responses()
+keywords = KeyWords()
+responses = Responses()
 
 
 class SexxiBot:
-    """ Main ChatBot class containing methods to check for specific inputs and create an appropriate response """
+    """ Main ChatBot class to take in user input and return an appropriate response.
+
+    Contains methods: fix_typos, to correct any user's typos;
+    help_check, to check if the user has asked for 'help' (a list of possible commands);
+    check_phrase_similarity, to compare user inputs to keywords to generate basic responses;
+    create_response, to generate a new response based on the users input.
+    """
+
     def __init__(self):
         self.user_input = str()
         self.input_len = int()
@@ -42,8 +49,8 @@ class SexxiBot:
             words.append(i[0])
 
         for part in range(len(words)):
-            if words[part] in behaviours.slang_typo_dict.keys():
-                words[part] = behaviours.slang_typo_dict[words[part]]
+            if words[part] in slang_typo_dict.keys():
+                words[part] = slang_typo_dict[words[part]]
         self.user_input = ' '.join(words)
         return False  # Returns false to move on to help_check
 
@@ -56,12 +63,12 @@ class SexxiBot:
     def check_phrase_similarity(self):
         self.user_input = TextBlob(self.user_input.lower()).tags
         self.input_len = len(self.user_input)
-        for phrase_type in behaviours.PHRASE_TYPES:
+        for phrase_type in PHRASE_TYPES:
             for phrase in getattr(keywords, phrase_type):
                 score = float()
                 for word in self.user_input:
                     for n in phrase:
-                        if word and n not in behaviours.unimportant_words:
+                        if word and n not in unimportant_words:
                             score += liquidmetal.score(n, word[0]) / self.input_len
                 if score >= 0.7:  # Could be increased/ decreased through testing to find more optimal value
                     self.response = random.choice(getattr(responses, phrase_type))
@@ -79,12 +86,17 @@ class SexxiBot:
 bot = SexxiBot()  # Instantiate the bot
 
 
-def run_bot(user_message, start):
+def run_bot(user_input, start):
+    """
+    :param(str) user_input: Message sent to the bot
+    :param(bool) start: If the user is new to the bot
+    :return(str) return: Response from the bot
+    """
     if start:
         bot.response = "Hello there! Have a chat with me or say 'help' to see available commands :)"
         return bot.response
 
-    bot.user_input = raw_input(user_message)
+    bot.user_input = user_input
 
     # fix_typos:    Fix any user typos and slang
     # check_phrase_similarity:  Check user's input similarity to all key phrases
@@ -96,15 +108,15 @@ def run_bot(user_message, start):
 
 
 # For testing purposes
-def main():
-    print run_bot("Enter a message: ", start=True)
+def test():
+    print run_bot(raw_input("Enter a message: "), start=True)
     while 1:
-        print run_bot("Enter a message: ", start=False)
+        print run_bot(raw_input("Enter a message: "), start=False)
 
 
 # Make sure it's only when we're running this file directly
 if __name__ == '__main__':
     try:
-        main()
+        test()
     except KeyboardInterrupt:  # No need for an error when stopping the program during testing
         pass
